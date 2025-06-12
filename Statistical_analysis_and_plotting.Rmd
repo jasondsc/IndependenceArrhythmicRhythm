@@ -41,7 +41,7 @@ ggplot(data, aes(x=Var1, y=expon_BIC, group=Var1, fill = 'Var1', colour = 'Var1'
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_frequencies_boxplot_plot.pdf', device = "pdf", width= 10, height =5)
 
 
-ggplot(data, aes(x=Var1, y=mse_BIC, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .15, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("residual variance (a.u.)") + ylab("estimated arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08'))
+ggplot(data, aes(x=Var1, y=mse_BIC, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .15, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated alpha frequency") + ylab("estimated residual variance (a.u.)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08'))
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_frequencies_boxplot_MSE.pdf', device = "pdf", width= 10, height =5)
 
@@ -50,8 +50,6 @@ ggplot(data, aes(x=Var1, y=expon_error, group=Var1, fill = 'Var1', colour = 'Var
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_frequencies_boxplot_error_expon.pdf', device = "pdf", width= 10, height =5)
 
 
-# corr plot between corr spec and the exponent 
-# tt(22:36)
 
 corrspecLinear= read.csv('~/Documents/McGill/simulations4Giu/Frequency_Simulations_corrspec_linear.csv', header = FALSE)
 corrspecLinear=corrspecLinear[501:4500,]
@@ -100,16 +98,6 @@ data$corralphamodel_error= (data$corralphamodel-0.7)^2
 data$expon_error=data$expon_BIC-1
 
 
-ggplot(data, aes(x=log10(corrspec_error), y=expon_error))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed') + stat_smooth(data= data[data$expon_error >0,], aes(x=log10(corrspec_error), y=expon_error), method = "glm",formula = y ~ poly(x, 1),fullrange = FALSE, color= 'black', linetype='dashed', se = FALSE)+ stat_smooth(data= data[data$expon_error <0,], aes(x=log10(corrspec_error), y=expon_error) , method = "glm",formula = y ~ poly(x, 1),fullrange = FALSE, color= 'black', linetype='dashed', se= FALSE)
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_frequency_scatter_plot_two_types_of_error.pdf', device = "pdf", width= 5, height =5)
-
-ggplot(data, aes(x=log10(corralphamodel_error), y=expon_error, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed')
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_frequency_scatter_plot_two_types_of_error_modelled.pdf', device = "pdf", width= 5, height =5)
-
-DescTools::SpearmanRho(data$corralpha, data$corralphalinear, use = c("complete.obs"), conf.level = 0.95) # 0.9783963
-
 # remove bad estimates 
 data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
 corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC)   ,]
@@ -119,103 +107,6 @@ data2= data2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5 ,]
 DescTools::SpearmanRho(data2$expon_BIC, rowMeans(corrspec2[,22:36]), use = c("complete.obs"), conf.level = 0.95) # -0.2962450
 DescTools::SpearmanRho(data2$expon_BIC, data2$corralphamodel, use = c("complete.obs"), conf.level = 0.95) # -0.01882922
 DescTools::SpearmanRho(data2$expon_BIC, data2$corralphalinear, use = c("complete.obs"), conf.level = 0.95) # -0.1675251
-
-
-
-
-
-
-
-
-ggplot(data2, aes(x=log10(abs(expon_error)), y=corralpha, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') + facet_wrap(~Var1, nrow = 2, scales = "free") + stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black') + coord_cartesian(xlim = c(-4, 0), ylim = c(0.1, 0.9))
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_error_power_relationship_by_simulated_exponent.pdf', device = "pdf", width= 10, height =5)
-
-ggplot(data2, aes(x=log10(abs(expon_error)), y=corralpha))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') +  stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black')  + coord_cartesian(xlim = c(-4, 0), ylim = c(0.1, 1.75))
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_error_power_relationship_by_simulated_exponent.pdf', device = "pdf", width= 5, height =5)
-
-
-ggplot(data2, aes(x=log10(abs(expon_error)), y=log10(corralphamodel)))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in exponent") + ylab("modelled power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = log10(0.7), linetype= 'dashed') +  stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black')  + coord_cartesian(xlim = c(-4, 0), ylim = c(-0.7, 0.3))
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_error_MODELLED_power_relationship_by_simulated_exponent.pdf', device = "pdf", width= 5, height =5)
-
-ggplot(data2[abs(data2$expon_error) < 0.05,], aes(x=corralphamodel, y=corralpha))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') +  stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black') 
-
-
-ggplot(data2[abs(data2$expon_error) > 0.05,], aes(x=corralphamodel, y=corralpha))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') +  stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black') 
-
-
-DescTools::SpearmanRho(data2$corralpha[data2$Var1 == 10], data2$expon_error[data2$Var1 == 10], use = c("complete.obs"), conf.level = 0.95) 
-
-DescTools::SpearmanRho(data2$corralpha[abs(data2$expon_error) > 0.05], data2$corralphamodel[abs(data2$expon_error) > 0.05], use = c("complete.obs"), conf.level = 0.95) 
-
-DescTools::SpearmanRho(data2$corralpha[abs(data2$expon_error) < 0.05], data2$corralphamodel[abs(data2$expon_error) < 0.05], use = c("complete.obs"), conf.level = 0.95) 
-
-datareg= as.data.frame(scale(data2))
-lm1=lm(corralphamodel ~  corralpha , datareg)
-lm2=lm(corralphamodel ~  corralpha +expon_error, datareg)
-lm3=lm(corralphamodel ~  corralpha* expon_error, datareg)
-anova(lm1,lm2,lm3)
-BIC(lm3) - BIC(lm2)
-sjPlot::tab_model(lm2)
-
-
-# partial correlations
-cor.test(datareg$corralpha , datareg$expon_BIC, method= 'spearman')
-
-cor.test(residuals(lm(datareg$corralpha ~ datareg$expon_error)), datareg$expon_BIC, method= 'spearman')
-
-cor.test(datareg$corralpha, datareg$expon_error, method= 'spearman')
-cor.test(datareg$corralpha, datareg$expon_BIC, method= 'spearman')
-
-# mediation analysis
-datareg=data2
-datareg$corralpha = log10(datareg$corralpha)
-datareg$expon_BIC = log10(datareg$expon_BIC)
-#datareg$expon_error = log10(abs(datareg$expon_error))
-
-
-
-
-
-datareg$expon_error = log10(abs(datareg$expon_error))
-datareg= as.data.frame(scale(datareg))
-fit.totaleffect=lm(corralpha~expon_BIC, datareg)
-summary(fit.totaleffect)
-sjPlot::tab_model(fit.totaleffect)
-
-fit.mediator=lm(expon_error~expon_BIC, datareg)
-summary(fit.mediator)
-sjPlot::tab_model(fit.mediator)
-
-fit.dv=lm(corralpha~expon_error+expon_BIC,datareg)
-summary(fit.dv)
-sjPlot::tab_model(fit.dv)
-
-results = mediation::mediate(fit.mediator, fit.dv, treat='expon_BIC', mediator='expon_error', boot=T)
-summary(results)
-
-signif(fit.mediator$coefficients[2],2)
-signif(fit.dv$coefficients[2],2)
-signif(results$tau.coef,2)
-signif(fit.dv$coefficients[3],2)
-
-pdf("~/Desktop/Xiaobo_age_data/mediation_of_age_on_spectral_flow_direction.pdf")
-data <- c(0, "'.-17*'", 0,
-          0, 0, 0, 
-          "'-.24*'", "'.39* (.35)'", 0)
-M<- matrix (nrow=3, ncol=3, byrow = TRUE, data=data)
-plot<- plotmat (M, pos=c(1,2), 
-                name= c( "Theta \nbottom-up","Age", "Beta \ntop-down"), 
-                box.type = "circle", box.size = 0.12, box.prop=0.5,  curve=0)
-dev.off()
-
-
-
-
-
-
 
 
 
@@ -458,6 +349,7 @@ data4plot=data.frame(freqs= c(7,8,9,10,11,12,13,14),
 
 ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
   stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated rhythmic alpha frequenyc (Hz)") + ylab("estimated relationship w/ beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
 ```
 
 
@@ -475,12 +367,8 @@ corrspecLinear = read.csv('~/Documents/McGill/simulations4Giu/Amplitude_Simulati
 
 corrspec_error = read.csv('~/Documents/McGill/simulations4Giu/Amplitude_Simulations_error.csv', header = FALSE)
 
-cor.test(data$expon_BIC, data$Var1) # 0.06803241
-cor.test(data$mse_BIC, data$Var1) # -0.1858279
-
 data$expon_error= (data$expon_BIC-1)
 data$corrspec_error= rowMeans(corrspec_error)
-cor.test(data$corrspec_error, data$Var1) # -0.001683254
 
 data$Var1 = factor(data$Var1)
 
@@ -490,10 +378,6 @@ ggplot(data, aes(x=Var1, y=expon_BIC, group=Var1))+  geom_point(shape=21, color=
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_amplitude_scatter_plot.pdf', device = "pdf", width= 10, height =5)
 
-
-ggplot(data, aes(x=log10(corrspec_error), y=expon_error, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed') + facet_wrap(~Var1, ncol = 5)
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_amplitudes_scatter_plot_two_types_of_error_byrow.pdf', device = "pdf", width= 10, height =5)
 
 jitter_pos=position_jitter(width = .25, height = 0, seed = 1)
 ggplot(data, aes(x=Var1, y=log10(expon_error), group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5, position= jitter_pos) + theme_classic() + xlab("simulated alpha amplitude") + ylab("log 10 arrhythmic slope error")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed')
@@ -519,8 +403,6 @@ ggplot(data, aes(x=Var1, y=corrspec_error, group=Var1, fill = 'Var1', colour = '
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_amplitude_boxplot_residual_var_peaks.pdf', device = "pdf", width= 10, height =5)
 
 
-# corr plot between corr spec and the exponent 
-# tt(22:36)
 
 data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_amplitudes_output.csv', header = TRUE)
 data$corralpha=rowMeans(corrspec[,22:36])
@@ -560,28 +442,12 @@ data$corrbetamodel[data$corrbetamodel== -Inf] =NaN
 data$corralphamodel_error= (data$corralphamodel-0.7)^2
 data$expon_error= (data$expon_BIC-1)
 
-ggplot(data, aes(x=log10(corrspec_error), y=expon_error))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed') + stat_smooth(data= data[data$expon_error >0,], aes(x=log10(corrspec_error), y=expon_error), method = "glm",formula = y ~ poly(x, 1),fullrange = FALSE, color= 'black', linetype='dashed', se = FALSE)+ stat_smooth(data= data[data$expon_error <0,], aes(x=log10(corrspec_error), y=expon_error) , method = "glm",formula = y ~ poly(x, 1),fullrange = FALSE, color= 'black', linetype='dashed', se= FALSE)
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_amplitude_scatter_plot_two_types_of_error.pdf', device = "pdf", width= 5, height =5)
-
-ggplot(data, aes(x=log10(corralphamodel_error), y=expon_error, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed') + facet_wrap(~Var1, ncol = 5)
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_amplitude_scatter_plot_two_types_of_error_fromModelledAmplitudes_byrow.pdf', device = "pdf", width= 10, height =5)
-
-
-DescTools::SpearmanRho(data$corralpha, data$corralphalinear, use = c("complete.obs"), conf.level = 0.95) # 0.9783963
 
 # remove bad estimates 
 data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
 corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC)   ,]
 corrspec2= corrspec2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5  ,]
 data2= data2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5 ,]
-
-DescTools::SpearmanRho(data2$expon_BIC, rowMeans(corrspec2[,22:36]), use = c("complete.obs"), conf.level = 0.95) # -0.007786458
-DescTools::SpearmanRho(data2$expon_BIC, data2$corralphamodel, use = c("complete.obs"), conf.level = 0.95) # 0.06696761
-DescTools::SpearmanRho(data2$expon_BIC, data2$corralphalinear, use = c("complete.obs"), conf.level = 0.95) #0.06101575
-
-DescTools::SpearmanRho(rowMeans(corrspec2[,22:36]), data2$corralphamodel, use = c("complete.obs"), conf.level = 0.95) # 0.9570765
 
 spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.3], rowMeans(corrspec2[data2$Var1==0.3,22:36]), use = c("complete.obs"), conf.level = 0.95) 
 spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.5], rowMeans(corrspec2[data2$Var1==0.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
@@ -606,13 +472,6 @@ ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill=
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_amplitude.pdf', device = "pdf", height = 5, width = 5)
 
-
-lm00=lm(expon_BIC ~ corralpha*alpha_amplitude, data2)
-summary(lm00)
-sjPlot::tab_model(lm00)
-
-lm00=lm(expon_BIC ~ poly(alpha_amplitude,2)*corralpha, data2)
-summary(lm00)
 
 data4plot2= data4plot
 
@@ -791,8 +650,6 @@ ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill=
 ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_beta_slope_by_simulated_amplitude_model_no_NAs_compare_all.pdf', device = "pdf", height = 5, width = 15)
 
 
-
-
 ```
 
 
@@ -952,17 +809,11 @@ aperiodic_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulati
 
 offset_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations__offset_error_signed.csv', header = FALSE)
 
-cor.test(data$expon_BIC, data$Var1) # 0.9084615 
-cor.test(data$mse_BIC, data$Var1) # -3.333008e-05 
-
 data$expon_error=data$Var1-data$expon_BIC
 
 data$corrspec_error= rowMeans(corrspec_error)
 data$aperiodic_error= rowMeans(aperiodic_error)
 data$offset_error= offset_error$V1
-cor.test(data$corrspec_error, data$Var1) # -0.006023982
-cor.test(data$corrspec_error, data$aperiodic_error, method = 'spearman')
-cor.test(data$corrspec_error, data$offset_error, method = 'spearman')
 
 #data$Var1 = factor(data$Var1)
 
@@ -971,30 +822,20 @@ data$corralphaerror= rowMeans(corrspec_error[,22:36])
 data$corralphalinear=rowMeans(corrspeclinear[,22:36])
 
 data$expon_error=data$Var1-data$expon_BIC
-cor.test(data$expon_error, data$offset_error, method = 'spearman')
-
-
 
 jitter_pos=position_jitter(width = .25, height = 0, seed = 1)
 ggplot(data, aes(x=Var1, y=log10(corrspec_error), group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5, position= jitter_pos) + theme_classic() + xlab("simulated arrhythmic slope") + ylab("log 10 error in rhythmic component")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') 
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_plot_error.pdf', device = "pdf", width= 10, height =5)
 
+data$Var12= factor(data$Var1)
 
-ggplot(data, aes(x=aperiodic_error, y=corralpha, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') 
-
-#ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_plot_two_types_of_error.pdf', device = "pdf", width= 5, height =5)
-
-ggplot(data, aes(x=offset_error, y=corrspec_error, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = 0.0, linetype= 'dashed') 
-
-#ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_plot_two_types_of_error_byrow.pdf', device = "pdf", width= 10, height =5)
-
-ggplot(data, aes(x=Var1, y=mse_BIC, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .25, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated exponent") + ylab("residual variance (a.u.)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08'))
+ggplot(data, aes(x=Var12, y=mse_BIC, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .25, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated exponent") + ylab("residual variance (a.u.)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08'))
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_boxplot_MSE.pdf', device = "pdf", width= 10, height =5)
 
 
-ggplot(data, aes(x=Var1, y=corralpha, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .25, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated exponent") + ylab("rythmic alpha (a.u.)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = 0.6457, linetype= 'dashed') + coord_cartesian(ylim = c(0,1))
+ggplot(data, aes(x=Var12, y=corralpha, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .25, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated exponent") + ylab("rythmic alpha (a.u.)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = 0.6457, linetype= 'dashed') + coord_cartesian(ylim = c(0,1))
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_corralpha_power.pdf', device = "pdf", width= 10, height =5)
 
@@ -1011,23 +852,13 @@ peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
 data$corralphamodel=apply(peak_params_amp, 1, max, na.rm = TRUE)
 data$corralphamodel[data$corralphamodel == -Inf] = NaN
 
-ggplot(data, aes(x=Var1, y=corralphamodel, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .25, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated exponent") + ylab("rythmic alpha amplitude")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = 0.7, linetype= 'dashed') + coord_cartesian(ylim = c(0.25,0.9))
+ggplot(data, aes(x=Var12, y=corralphamodel, group=Var1, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .25, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated exponent") + ylab("rythmic alpha amplitude")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = 0.7, linetype= 'dashed') + coord_cartesian(ylim = c(0.25,0.9))
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_peak_alpha_power.pdf', device = "pdf", width= 10, height =5)
 
 
-ggplot(data, aes(x=expon_error, y=corralphamodel, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = 0, linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed')
-
-ggplot(data[abs(scale(data$mse_BIC)[,1]) < 2.5,], aes(x=expon_error, y=corralpha, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("error in exponent") + ylab("corrected alpha power (log-log)")  + coord_cartesian(ylim = c(0.0, 1.5), xlim = c(-1.0, 0.6))+ theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = 0, linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') + facet_wrap(~Var1, nrow = 5, scales = "free") + smplot2::sm_statCorr(corr_method = 'spearman')
-
-ggplot(data, aes(x=expon_BIC, y=corralpha, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = 0, linetype= 'dashed') + geom_hline(yintercept = 0.0, linetype= 'dashed')
-
-ggplot(data, aes(x=expon_error, y=log10(corralphalinear), group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = 0, linetype= 'dashed') 
 
 data$overestimated = data$expon_error >0 
-
-ggplot(data, aes(x=overestimated, y=corralpha, group=overestimated, fill = 'Var1', colour = 'Var1'))+  ggdist::stat_halfeye(adjust = .5, width = .5, .width = 0, justification = -.5, alpha=0.5, point_alpha= 0) + geom_boxplot(width = .25, outlier.shape = NA, colour= '#202020', position = position_dodge(1)) + theme_classic() + xlab("simulated exponent") + ylab("residual variance (a.u.)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')  + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08'))
-
 
 RVAideMemoire::perm.t.test(data$corralpha[data$overestimated],data$corralpha[!data$overestimated], nperm=1000, paired=FALSE)
 
@@ -1076,14 +907,6 @@ data$corrbetamodel[data$corrbetamodel== -Inf] =NaN
 data$corralphamodel_error= (data$corralphamodel-0.7)^2
 data$expon_error=data$Var1-data$expon_BIC
 
-ggplot(data, aes(x=log10(corrspec_error), y=expon_error))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed') + stat_smooth(data= data[data$expon_error >0,], aes(x=log10(corrspec_error), y=expon_error), method = "glm",formula = y ~ poly(x, 1),fullrange = FALSE, color= 'black', linetype='dashed', se = FALSE)+ stat_smooth(data= data[data$expon_error <0,], aes(x=log10(corrspec_error), y=expon_error) , method = "glm",formula = y ~ poly(x, 1),fullrange = FALSE, color= 'black', linetype='dashed', se= FALSE)
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_plot_two_types_of_error_fromModelledAmplitudes.pdf', device = "pdf", width= 5, height =5)
-
-
-ggplot(data, aes(x=log10(corralphamodel_error), y=expon_error, group=Var1))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in rhythmic component") + ylab("error in arrhythmic slope")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_hline(yintercept = 0, linetype= 'dashed') + facet_wrap(~Var1, ncol = 5)
-
-ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_plot_two_types_of_error_fromModelledAmplitudes_byrow.pdf', device = "pdf", width= 10, height =5)
 
 # remove bad estimates 
 data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
@@ -1091,12 +914,6 @@ corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) 
 corrspec2= corrspec2[data2$expon_BIC > 0.3 & data2$expon_BIC < 2.0  ,]
 data2= data2[data2$expon_BIC > 0.3 & data2$expon_BIC < 2.0 ,]
 
-
-DescTools::SpearmanRho(data2$corrspec_error, data2$offset_error, use = c("complete.obs"), conf.level = 0.95) # 0.2642543 0.2381087 0.2900173 
-
-DescTools::SpearmanRho(data2$expon_error, data2$offset_error, use = c("complete.obs"), conf.level = 0.95) # 0.3302380 0.3051484 0.3548695 
-
-DescTools::SpearmanRho(log10(data2$corralpha), data2$offset_error, use = c("complete.obs"), conf.level = 0.95) # 0.2137484 0.1869621 0.2402170 
 
 data2$expon_error_sqd= data2$expon_error^2
 data4reg= data.frame(scale(data2))
@@ -1123,7 +940,6 @@ ggplot(data2, aes(x=expon_error, y=corralpha))+  geom_point(shape=21, color="whi
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_expon_error_power_relationship.pdf', device = "pdf", width= 5, height =5)
 
 
-
 ggplot(data2, aes(x=offset_error, y=corralphamodel))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("error in offset") + ylab("modelled alpha power")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') + geom_vline(xintercept = 0.0, linetype= 'dashed') + stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black', linetype= 'dashed') 
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_offset_error_modelled_power_relationship.pdf', device = "pdf", width= 5, height =5)
@@ -1143,23 +959,6 @@ ggplot(data2, aes(x=log10(abs(expon_error)), y=log10(corralphamodel)))+  geom_po
 
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_error_MODELLED_power_relationship_by_simulated_exponent.pdf', device = "pdf", width= 5, height =5)
 
-ggplot(data2[abs(data2$expon_error) < 0.05,], aes(x=corralphamodel, y=corralpha))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') +  stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black') 
-
-
-ggplot(data2[abs(data2$expon_error) > 0.05,], aes(x=corralphamodel, y=corralpha))+  geom_point(shape=21, color="white",fill="#10A0C0", size=5, alpha=0.5) + theme_classic() + xlab("log 10 error in exponent") + ylab("corrected alpha power (log-log)")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + geom_vline(xintercept = log10(0), linetype= 'dashed') + geom_hline(yintercept = 0.7, linetype= 'dashed') +  stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = FALSE, color= 'black') 
-
-
-DescTools::SpearmanRho(data2$corralpha[abs(data2$expon_error) > 0.05], data2$corralphamodel[abs(data2$expon_error) > 0.05], use = c("complete.obs"), conf.level = 0.95) 
-
-DescTools::SpearmanRho(data2$corralpha[abs(data2$expon_error) < 0.05], data2$corralphamodel[abs(data2$expon_error) < 0.05], use = c("complete.obs"), conf.level = 0.95) 
-
-datareg= as.data.frame(scale(data2))
-lm1=lm(corralphamodel ~  corralpha , datareg)
-lm2=lm(corralphamodel ~  corralpha +expon_error, datareg)
-lm3=lm(corralphamodel ~  corralpha* expon_error, datareg)
-anova(lm1,lm2,lm3)
-BIC(lm3) - BIC(lm2)
-sjPlot::tab_model(lm2)
 
 
 
@@ -1183,8 +982,6 @@ data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
 ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
   stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
 
-lm00=lm(expon_BIC ~ corralpha*alpha_amplitude, data2)
-summary(lm00)
 
 data4plot2=data4plot
 
