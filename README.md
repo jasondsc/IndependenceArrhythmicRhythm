@@ -8,6 +8,9 @@ Here we test how three different methods for quantifying brain rhythms impact th
 
 We demonstrate that spectral detrending methods (i.e., subtracting the arrhythmic fit from the spectrum in either log-log or linear space) introduce spurious relationships between spectral model parameters. This ultimately challenges the robustness, reproducibility, and interpretability of findings. 
 
+## Data
+
+Data generated for this project (simulations) are aviable from the corresponding author upon reasonable request. Empirical data are accessible from the CamCAN website.
 
 ## Description of the project
 
@@ -16,6 +19,7 @@ Here are the different steps we did :
 - We simulate neural time series data using the NeuroDSP toolbox to generate ground truth data to parameterize (Simulate_neural_timeseries.ipynb)
 - We model the simulated neural time series data using the ms-specparam function as implemented in brainstorm and organize the outputs into a csv file for statistical analyses (Specparam_timeseries_and_organize_outputs.m)
 - We evaluate how the choice of methodology for quantifying brain rhythms impacts the interpretation of the results (Statistical_analysis_and_plotting.Rmd)
+- We then test whether the divergence between methods is similarly observed in an empirical dataset (CamCan_restingstateAlpha.Rmd)
 
 ## Manuscript and Citation
 
