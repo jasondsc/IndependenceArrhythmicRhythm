@@ -1,0 +1,553 @@
+---
+  title: "alpha power and exponent: two sides of the same coin?"
+---
+  
+
+
+```{r cleaning data and demographics}
+library(ggplot2)
+library(dplyr)
+library(BayesFactor)
+library(ggseg)
+library(ggsegDesterieux)
+library(colorspace)
+
+cbbPalette= c("#4f89e0", "#f5ec6c",'#156605',"#76D7C4","#268236", '#4d3d87','#593d80', '#3b49e3')
+
+# pool together demographics from all parts
+demo=read.csv('~/Documents/CAMCAN_outputs/CAMCAN_Analysis/standard_data.csv')
+demo2=read.csv('~/Desktop/Xiaobo_age_data/fulldemo_fromCAMCAN_test.csv')
+demo$CCID=paste('sub',demo$CCID, sep = '_')
+ids=read.csv('~/Documents/CAMCAN_outputs/CAMCAN_Analysis/subject_codes.csv')
+index=demo$CCID %in% ids$Ids
+demo=demo[index,]
+
+demo$Group[demo$Age>=18 & demo$Age <45]= "young adult"
+demo$Group[demo$Age>=45 & demo$Age <65]= "adult"
+demo$Group[demo$Age>=65 & demo$Age <90]= "older adult"
+
+full_demo=read.csv('~/Documents/CAMCAN_outputs/approved_data.csv')
+full_demo$CCID=paste('sub',full_demo$CCID, sep = '_')
+index=full_demo$CCID %in% ids$Ids
+full_demo=full_demo[index,]
+
+exponent_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/aperiodic_exponent_BICREV.csv', header = FALSE)
+
+offset_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/aperiodic_offset_BICREV.csv', header = FALSE)
+
+MSE_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/fit_mse_BICREV.csv', header = FALSE)
+BF_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/BF_BICREV.csv', header = FALSE)
+
+Rsq_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/fit_rsq_BICREV.csv', header = FALSE)
+
+# organized atlas info (summary of ROI)
+atlas=read.csv('/Users/jason/Desktop/Destrieux_neuromaps/Neuromaps_destrieux_full_atlas.csv')
+
+Broabandalpha_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/Uncorrected_alpha_power.csv', header = FALSE)
+
+corralpha_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/Corrected_alpha_power.csv', header = FALSE)
+
+corrbeta_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/Corrected_beta_power.csv', header = FALSE)
+
+peak_cf_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/Peak_center_freq_BICREV.csv', header = FALSE)
+peak_amp_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/Amplitude_freq_BICREV.csv', header = FALSE)
+peak_std_BIC= read.csv('~/Documents/FOOOF_BICvsVANILLA/outputs/Std_freq_BICREV.csv', header = FALSE)
+
+peak_cf_BIC= as.matrix(peak_cf_BIC)
+peak_amp_BIC= as.matrix(peak_amp_BIC)
+
+# get the maximum alpha peak for each ROI and person 
+peak_params_amp <- array(0, dim=c(606,148,6))
+peak_params_cf <- array(0, dim=c(606,148,6))
+
+for (i in 1:148){
+  roi_index= (6*(i-1)+1):(6*(i-1)+6)
+  peak_params_amp[,i,] = peak_amp_BIC[,roi_index]
+  peak_params_cf[,i,] = peak_cf_BIC[,roi_index]
+}
+
+peak_params_amp[which(peak_params_cf <6 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <6 | peak_params_cf >12)] = NaN
+
+model_alpha=apply(peak_params_amp, c(1,2),max,na.rm = TRUE)
+model_alpha[model_alpha== -Inf] =NaN
+
+for (i in 1:148){
+  roi_index= (6*(i-1)+1):(6*(i-1)+6)
+  peak_params_amp[,i,] = peak_amp_BIC[,roi_index]
+  peak_params_cf[,i,] = peak_cf_BIC[,roi_index]
+}
+
+peak_params_amp[which(peak_params_cf <12 | peak_params_cf >30)] = NaN
+peak_params_cf[which(peak_params_cf <12 | peak_params_cf >30)] = NaN
+
+model_beta=apply(peak_params_amp, c(1,2),max,na.rm = TRUE)
+model_beta[model_alpha== -Inf] =NaN
+
+
+index_dest= read.csv('~/Documents/CAMCAN_outputs/INDEX_Desteriuex.csv', header = FALSE)
+age_index=order(demo$Age)
+demo=demo[age_index,]
+exponent_BIC=exponent_BIC[age_index,index_dest$V1]
+offset_BIC=offset_BIC[age_index,index_dest$V1]
+MSE_BIC=MSE_BIC[age_index,index_dest$V1]
+BF_BIC=BF_BIC[age_index,index_dest$V1]
+Broabandalpha_BIC=Broabandalpha_BIC[age_index,index_dest$V1]
+corralpha_BIC=corralpha_BIC[age_index,index_dest$V1]
+corrbeta_BIC=corrbeta_BIC[age_index,index_dest$V1]
+Rsq_BIC=Rsq_BIC[age_index,index_dest$V1]
+model_alpha= as.data.frame(model_alpha[age_index,index_dest$V1])
+model_beta= as.data.frame(model_beta[age_index,index_dest$V1])
+
+na_byROI=colSums(is.na(model_alpha))
+demo$NaNsNum=rowSums(is.na(model_alpha))
+model_alpha_clean=model_alpha
+model_alpha_clean[is.na(model_alpha)]=0
+
+model_beta_clean=model_beta
+model_beta_clean[is.na(model_beta)]=0
+
+
+```
+
+
+```{r look at relationship across the cortex between alpha and exponent}
+
+library(ggplot2)
+library(ggsegDesterieux)
+
+
+atlas$corrAlpha= mapply(cor,exponent_BIC,corralpha_BIC, use= 'complete.obs', method= 'spearman')
+atlas$modelAlpha= mapply(cor,exponent_BIC,model_alpha_clean, use= 'complete.obs', method= 'spearman')
+atlas$corrdiff = atlas$corrAlpha - atlas$modelAlpha
+
+atlas$corrAlpha[atlas$corrAlpha >0.2] = 0.2
+atlas$modelAlpha[atlas$modelAlpha >0.2] = 0.2
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.2,0.2)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_corralphaloglog.pdf', device = "pdf", height = 5, width = 7)
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.2,0.2)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+tt=mapply(cor.test,exponent_BIC,corralpha_BIC, use= 'complete.obs', method= 'spearman')
+atlas$corrpvalues_adj=p.adjust(unlist(tt[3,]), method = 'fdr')
+atlas$pvalBIN=atlas$corrpvalues_adj < 0.05
+
+atlas$corrAlpha[!atlas$pvalBIN] = 0
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.2,0.2)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_greyedOut_corralphaloglog.pdf', device = "pdf", height = 5, width = 7)
+
+
+tt=mapply(cor.test,exponent_BIC,model_alpha_clean, use= 'complete.obs', method= 'spearman')
+atlas$corrpvalues_adj=p.adjust(unlist(tt[3,]), method = 'fdr')
+atlas$pvalBIN=atlas$corrpvalues_adj < 0.05
+
+atlas$modelAlpha[!atlas$pvalBIN] = 0
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.2,0.2)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_greyedOut_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+
+# plot data of 141 
+
+data4plot= data.frame(alphapower= c(corralpha_BIC[,141], model_alpha_clean[,141]), exponent= c(exponent_BIC[,141], exponent_BIC[,141]), group= rep(c('subtraction', 'model'), each=606))
+
+ggplot(data4plot, aes(x=alphapower, y=exponent, colour = group, fill= group))+  geom_point(shape=21, color="white", size=5, alpha=0.5) + theme_classic() + xlab("rhythmic alpha") + ylab("aperiodic exponent")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14),legend.position = 'none') + stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = TRUE  ) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + facet_wrap(~group)
+
+ggsave('~/Desktop/alertness_2023/Figures/example_correlation_leftSulSubparietal.pdf', device = "pdf", width= 10, height =5)
+
+atlas$eaxmple= 0
+atlas$eaxmple[141] =1
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = eaxmple)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(0,1)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topoexample_region.pdf', device = "pdf", height = 5, width = 7)
+
+
+data4plot= data.frame(alphapower= c(corralpha_BIC[,134], model_alpha_clean[,134]), exponent= c(exponent_BIC[,134], exponent_BIC[,134]), group= rep(c('subtraction', 'model'), each=606))
+
+ggplot(data4plot, aes(x=alphapower, y=exponent, colour = group, fill= group))+  geom_point(shape=21, color="white", size=5, alpha=0.5) + theme_classic() + xlab("rhythmic alpha") + ylab("aperiodic exponent")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14),legend.position = 'none') + stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = TRUE  ) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + facet_wrap(~group)
+
+ggsave('~/Desktop/alertness_2023/Figures/example_correlation_rightpostcentral.pdf', device = "pdf", width= 10, height =5)
+
+atlas$NumNaNs = na_byROI
+cor.test(atlas$NumNaNs, atlas$corrdiff,method = 'spearman')
+cor.test(demo$NaNsNum, demo$Age, method = 'spearman')
+
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = NumNaNs)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(0,185)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_number_of_NaNs.pdf', device = "pdf", height = 5, width = 7)
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrdiff)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.4,0.4)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_difference_in_corr.pdf', device = "pdf", height = 5, width = 7)
+
+
+
+# need to add in spatial nulls 
+permuted_index= read.csv('~/Documents/SickKids/abagen_analysis/csv_data4MATLAB/permuted_indexes_of_destriuex_atlas_SPINs&Twirl.csv')
+permuted_index= permuted_index[,-1]
+permuted_index=permuted_index+1
+permuted_corrs= c()
+orig=cor.test(atlas$NumNaNs, atlas$corrdiff,method = 'spearman')
+for (i in 1:1000) {
+  
+  # permute alpha
+  permuted_topo= atlas$corrdiff[permuted_index[,i]]
+  permuted_corrs[i]=cor(atlas$NumNaNs, permuted_topo ,method = 'spearman')
+    
+}
+(sum(orig$estimate < permuted_corrs)+1)/1001 # permuted p value is 0.6453546
+
+
+```
+
+
+
+
+```{r look at relationship beta and alpha}
+
+library(ggplot2)
+library(ggsegDesterieux)
+
+
+atlas$corrAlpha= mapply(cor,corralpha_BIC,corrbeta_BIC, use= 'complete.obs', method= 'spearman')
+atlas$modelAlpha= mapply(cor,model_alpha_clean,model_beta_clean, use= 'complete.obs', method= 'spearman')
+atlas$corrdiff = atlas$corrAlpha - atlas$modelAlpha
+
+atlas$corrAlpha[atlas$corrAlpha >1] = 1
+atlas$modelAlpha[atlas$modelAlpha >1] = 1
+
+atlas$corrAlpha[atlas$corrAlpha < -1] = -1
+atlas$modelAlpha[atlas$modelAlpha < -1] = -1
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-1,1)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_corrALPHABETAloglog.pdf', device = "pdf", height = 5, width = 7)
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-1,1)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_modelALPHABETA.pdf', device = "pdf", height = 5, width = 7)
+
+
+tt=mapply(cor.test,corralpha_BIC,corrbeta_BIC, use= 'complete.obs', method= 'spearman')
+atlas$corrpvalues_adj=p.adjust(unlist(tt[3,]), method = 'fdr')
+atlas$pvalBIN=atlas$corrpvalues_adj < 0.05
+
+atlas$corrAlpha[!atlas$pvalBIN] = 0
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-1,1)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_greyedOut_corrALPHABETAloglog.pdf', device = "pdf", height = 5, width = 7)
+
+
+tt=mapply(cor.test,model_alpha_clean,model_beta_clean, use= 'complete.obs', method= 'spearman')
+atlas$corrpvalues_adj=p.adjust(unlist(tt[3,]), method = 'fdr')
+atlas$pvalBIN=atlas$corrpvalues_adj < 0.05
+
+atlas$modelAlpha[!atlas$pvalBIN] = 0
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-1,1)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_greyedOut_modelALPHABETA.pdf', device = "pdf", height = 5, width = 7)
+
+
+```
+
+
+```{r look at relationship across the cortex between alpha and Age}
+
+library(ggplot2)
+library(ggsegDesterieux)
+
+
+atlas$corrAlpha= apply(corralpha_BIC, 2, cor,demo$Age,use= 'complete.obs', method= 'spearman')
+atlas$modelAlpha= apply(model_alpha_clean, 2, cor,demo$Age, use= 'complete.obs', method= 'spearman')
+atlas$corrdiff = atlas$corrAlpha - atlas$modelAlpha
+
+atlas$corrAlpha[atlas$corrAlpha >0.35] = 0.35
+atlas$modelAlpha[atlas$modelAlpha >0.35] = 0.35
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.35,0.35)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_AGE_topo_of_linear_relationship_corralphaloglog.pdf', device = "pdf", height = 5, width = 7)
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.35,0.35)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_AGE_topo_of_linear_relationship_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+tt=apply(corralpha_BIC, 2, cor.test, demo$Age,use= 'complete.obs', method= 'spearman')
+atlas$corrpvalues_adj=p.adjust(unlist(tt)[seq(2,148*7,7)], method = 'fdr')
+atlas$pvalBIN=atlas$corrpvalues_adj < 0.05
+
+atlas$corrAlpha[!atlas$pvalBIN] = 0
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.35,0.35)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_AGE_topo_of_linear_relationship_greyedOut_corralphaloglog.pdf', device = "pdf", height = 5, width = 7)
+
+
+tt=apply(model_alpha_clean, 2, cor.test, demo$Age,use= 'complete.obs', method= 'spearman')
+atlas$corrpvalues_adj=p.adjust(unlist(tt)[seq(2,148*7,7)], method = 'fdr')
+atlas$pvalBIN=atlas$corrpvalues_adj < 0.05
+
+atlas$modelAlpha[!atlas$pvalBIN] = 0
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.35,0.35)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_AGE_topo_of_linear_relationship_greyedOut_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+
+
+interaction =c()
+pvalues= c()
+for (i in 1:148){
+  Y= scale(c(corralpha_BIC[,i], model_alpha_clean[,i]))[,1]
+  X1= rep(c('corrected', 'modelled'), each=606)
+  X2 = scale(c(demo$Age, demo$Age))[,1]
+  lmtemp= lm(Y ~ X1*X2)
+  interaction[i] = lmtemp$coefficients[[4]]
+  pvalues[i] = summary(lmtemp)$coefficients[4,4]
+}
+
+pvaluesFDR=p.adjust(pvalues, method = 'fdr')
+atlas$interactioncorralpha_beta= interaction
+atlas$interactioncorralpha_pFDR= pvaluesFDR
+
+sum(pvaluesFDR < 0.05)
+
+interaction =c()
+pvalues= c()
+for (i in 1:148){
+  Y= scale(exponent_BIC[,i])[,1]
+  X1= scale(model_alpha_clean[,i])[,1]
+  X2= scale(demo$Age)[,1]
+  lmtemp= lm(Y ~ X1*X2)
+  interaction[i] = lmtemp$coefficients[[4]]
+  pvalues[i] = summary(lmtemp)$coefficients[4,4]
+}
+
+pvaluesFDR=p.adjust(pvalues, method = 'fdr')
+atlas$interactionmodelalpha_beta= interaction
+atlas$interactionmodelalpha_pFDR= pvaluesFDR
+sum(pvaluesFDR < 0.05)
+
+
+atlas$interactionmodelalpha_beta[atlas$interactionmodelalpha_beta > 0.2] = 0.2
+atlas$interactionmodelalpha_beta[atlas$interactionmodelalpha_beta < -0.2] = -0.2
+
+atlas$interactioncorralpha_beta[atlas$interactioncorralpha_beta >0.2] = 0.2
+atlas$interactioncorralpha_beta[atlas$interactioncorralpha_beta < -0.2] = -0.2
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = interactionmodelalpha_beta)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.2,0.2)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_interaction_effects_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+
+
+# plot data of 34 
+
+data4plot= data.frame(alphapower= c(corralpha_BIC[,13], model_alpha_clean[,13]), exponent= c(exponent_BIC[,13], exponent_BIC[,13]), group= rep(c('1.subtraction', '2.model'), each=606))
+
+ggplot(data4plot, aes(x=alphapower, y=exponent, colour = group, fill= group))+  geom_point(shape=21, color="white", size=5, alpha=0.5) + theme_classic() + xlab("rhythmic alpha") + ylab("aperiodic exponent")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14),legend.position = 'none') + stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = TRUE  ) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + facet_wrap(~group)
+
+ggsave('~/Desktop/alertness_2023/Figures/example_correlation_leftSulSubparietal.pdf', device = "pdf", width= 10, height =5)
+
+
+data4plot= data.frame(alphapower= c(corralpha_BIC[,134], model_alpha_clean[,134]), exponent= c(exponent_BIC[,134], exponent_BIC[,134]), group= rep(c('subtraction', 'model'), each=606))
+
+ggplot(data4plot, aes(x=alphapower, y=exponent, colour = group, fill= group))+  geom_point(shape=21, color="white", size=5, alpha=0.5) + theme_classic() + xlab("rhythmic alpha") + ylab("aperiodic exponent")  + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14),legend.position = 'none') + stat_smooth(method = "lm", formula = y ~ poly(x, 1), se = TRUE,fullrange = TRUE  ) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_color_manual(values=c('#10A0C0', '#D97D08')) + facet_wrap(~group)
+
+ggsave('~/Desktop/alertness_2023/Figures/example_correlation_rightpostcentral.pdf', device = "pdf", width= 10, height =5)
+
+atlas$NumNaNs = na_byROI
+cor.test(atlas$NumNaNs, atlas$corrdiff,method = 'spearman')
+cor.test(demo$NaNsNum, demo$Age, method = 'spearman')
+
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = NumNaNs)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(0,185)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_number_of_NaNs.pdf', device = "pdf", height = 5, width = 7)
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrdiff)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.35,0.35)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_difference_in_corr.pdf', device = "pdf", height = 5, width = 7)
+
+
+
+# need to add in spatial nulls 
+permuted_index= read.csv('~/Documents/SickKids/abagen_analysis/csv_data4MATLAB/permuted_indexes_of_destriuex_atlas_SPINs&Twirl.csv')
+permuted_index= permuted_index[,-1]
+permuted_index=permuted_index+1
+permuted_corrs= c()
+orig=cor.test(atlas$NumNaNs, atlas$corrdiff,method = 'spearman')
+for (i in 1:1000) {
+  
+  # permute alpha
+  permuted_topo= atlas$corrdiff[permuted_index[,i]]
+  permuted_corrs[i]=cor(atlas$NumNaNs, permuted_topo ,method = 'spearman')
+    
+}
+(sum(orig$estimate < permuted_corrs)+1)/1001 # permuted p value is 0.6453546
+
+
+```
+
+
+
+
+```{r look at relationship across the cortex between alpha and exponent just young ppl}
+
+library(ggplot2)
+library(ggsegDesterieux)
+
+
+atlas$corrAlpha= mapply(cor,exponent_BIC[demo$Group== 'young adult',],corralpha_BIC[demo$Group== 'young adult',], use= 'complete.obs')
+
+atlas$corrAlpha[atlas$corrAlpha >0.4] = 0.4
+
+atlas$modelAlpha= mapply(cor,exponent_BIC[demo$Group== 'young adult',],model_alpha_clean[demo$Group== 'young adult',], use= 'complete.obs')
+
+atlas$modelAlpha[atlas$modelAlpha >0.4] = 0.4
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.4,0.4)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_youngadults_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.4,0.4)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_youngadults_corralpha.pdf', device = "pdf", height = 5, width = 7)
+
+```
+
+
+```{r look at relationship across the cortex between alpha and exponent adults}
+
+
+atlas$modelAlpha= mapply(cor,exponent_BIC[demo$Group== 'adult',],model_alpha_clean[demo$Group== 'adult',], use= 'complete.obs')
+
+atlas$modelAlpha[atlas$modelAlpha >0.4] = 0.4
+
+atlas$corrAlpha= mapply(cor,exponent_BIC[demo$Group== 'adult',],corralpha_BIC[demo$Group== 'adult',], use= 'complete.obs')
+
+atlas$corrAlpha[atlas$corrAlpha >0.4] = 0.4
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.4,0.4)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_adults_corralpha.pdf', device = "pdf", height = 5, width = 7)
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.4,0.4)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_adults_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+```
+
+
+```{r look at relationship across the cortex between alpha and exponent older adults}
+
+atlas$modelAlpha= mapply(cor,exponent_BIC[demo$Group== 'older adult',],model_alpha_clean[demo$Group== 'older adult',], use= 'complete.obs')
+
+atlas$modelAlpha[atlas$modelAlpha >0.4] = 0.4
+
+atlas$corrAlpha= mapply(cor,exponent_BIC[demo$Group== 'older adult',],corralpha_BIC[demo$Group== 'older adult',], use= 'complete.obs')
+
+atlas$corrAlpha[atlas$corrAlpha >0.4] = 0.4
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = corrAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.4,0.4)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_older_adults_corralpha.pdf', device = "pdf", height = 5, width = 7)
+
+ggplot(atlas) +
+  geom_brain(atlas = desterieux, 
+             position = position_brain(hemi ~ side),
+             aes(fill = modelAlpha)) +  scale_fill_continuous_diverging(palette= 'Tropic', rev= FALSE, limits=c(-0.4,0.4)) + theme_void() 
+
+ggsave('~/Desktop/alertness_2023/Figures/CamCAN_topo_of_linear_relationship_older_adults_modelalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+```
+
+
+
