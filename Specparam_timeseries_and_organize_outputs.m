@@ -1,6 +1,9 @@
 % this code reads in the simulated time series csv values
 % then imports this data into brainstorm for fooofing/ ms-specparam
 
+% this script is specifically to organize the simulations associated with
+% Figure 2 & 3 
+
 % % % % % % % % % % % % % % % % % % % % % % % % %
  % delete files in brainstorm db before running again!!!
 % % % % % % % % % % % % % % % % % % % % % % % % % %
