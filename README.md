@@ -25,6 +25,6 @@ Here are the different steps we did :
 
 ## Manuscript and Citation
 
-This work on [bioRxiv](https://doi.org/10.1101/2025.09.24.678322). Please cite da Silva Castanheira et al., 2025. If you have any questions please contact the authors of the paper.
+This work is on [bioRxiv](https://doi.org/10.1101/2025.09.24.678322). Please cite da Silva Castanheira et al., 2025. If you have any questions please contact the authors of the paper.
 
 
