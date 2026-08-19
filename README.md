@@ -16,9 +16,9 @@ Data generated for this project (simulations) are aviable from the corresponding
 
 Here are the different steps we did :
 
-- We simulate neural time series data using the NeuroDSP toolbox to generate ground truth data to parameterize (Simulate_neural_timeseries.ipynb)
-- We model the simulated neural time series data using the ms-specparam function as implemented in brainstorm and organize the outputs into a csv file for statistical analyses (Specparam_timeseries_and_organize_outputs.m)
-- We evaluate how the choice of methodology for quantifying brain rhythms impacts the interpretation of the results (Statistical_analysis_and_plotting.Rmd)
+- We simulate neural time series data using the NeuroDSP toolbox to generate ground truth data to parameterize (Simulate_neural_timeseries.ipynb) This relies on the sim_peak_oscillation function
+- We model the simulated neural time series data using the ms-specparam function as implemented in brainstorm and organize the outputs into a csv file for statistical analyses (Specparam_timeseries_and_organize_outputs.m). Within this function we compute the corrected linear and log spectra
+- We evaluate how the choice of methodology for quantifying brain rhythms impacts the interpretation of the results (Statistical_analysis_and_plotting.Rmd). Here we use the corrected linear, log, or modelled rhythmic spectra to compute alpha power and run statistical tests.
 - We then test whether the divergence between methods is similarly observed in an empirical dataset (CamCan_restingstateAlpha.Rmd)
 
 ## Manuscript and Citation
