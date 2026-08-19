@@ -61,9 +61,11 @@ corrspecLinear=corrspecLinear[501:4500,]
 
 data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_frequency_output.csv', header = TRUE)
 data=data[501:4500,]
-data$corralpha=rowMeans(corrspec[,22:36])
+
+# compute the aggergate log and linear detrended power 
+data$corralpha=rowMeans(corrspec[,22:36]) # mean in alpha band, log detrended
 data$corrspec_error= rowMeans(corrspec_error)
-data$corralphalinear=rowMeans(corrspecLinear[,22:36])
+data$corralphalinear=rowMeans(corrspecLinear[,22:36]) # linear detrended 
 data$alpha_amplitude= data$Var1-6
 data$expon_error= (data$expon_BIC-1)^2
 
@@ -114,6 +116,7 @@ DescTools::SpearmanRho(data2$expon_BIC, data2$corralphamodel, use = c("complete.
 DescTools::SpearmanRho(data2$expon_BIC, data2$corralphalinear, use = c("complete.obs"), conf.level = 0.95) # -0.1675251
 
 
+# compute correlations for each simulated datapoint and then save in one big matrix
 
 spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==7], rowMeans(corrspec2[data2$Var1==7,22:36]), use = c("complete.obs"), conf.level = 0.95) 
 spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==8], rowMeans(corrspec2[data2$Var1==8,22:36]), use = c("complete.obs"), conf.level = 0.95) 
@@ -364,6 +367,7 @@ ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill=
 library(ggplot2)
 library(dplyr)
 
+# read in all necessary data 
 data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_frequency_output.csv', header = TRUE)
 data=data[501:4500,]
 
@@ -387,9 +391,12 @@ corrspecLinear=corrspecLinear[501:4500,]
 
 data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_frequency_output.csv', header = TRUE)
 data=data[501:4500,]
-data$corralpha=apply(corrspec[,22:36], 1, max)
+
+# compute the max of the log detrended spectra in alpha band
+data$corralpha=apply(corrspec[,22:36], 1, max) # this is point estimate log- detrended power
 data$corrspec_error= rowMeans(corrspec_error)
-data$corralphalinear=apply(corrspecLinear[,22:36], 1, max)
+# repeat for the linear detrended spectra
+data$corralphalinear=apply(corrspec[,22:36], 1, max) # this is point estimate log- detrended power
 data$alpha_amplitude= data$Var1-6
 data$expon_error= (data$expon_BIC-1)^2
 
@@ -1114,11 +1121,25 @@ min(data$rsq_BIC)
 peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_centerFreq.csv', header = FALSE)
 peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_amplitude.csv', header = FALSE)
 
+peak_params_std= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_std.csv', header = FALSE)
+
 peak_params_cf= as.matrix(peak_params_cf)
 peak_params_amp= as.matrix(peak_params_amp)
+peak_params_std= as.matrix(peak_params_std)
+
+#trials with alpha peak
+peak_params_cf_test= peak_params_cf
+peak_params_cf_test[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+peak_params_cf_test2= peak_params_cf
+peak_params_cf_test2[which(peak_params_cf <12 | peak_params_cf >30)] = NaN
+
+sum((rowSums(apply(peak_params_cf_test, 2, is.na)) < 6) & (rowSums(apply(peak_params_cf_test2, 2, is.na)) < 6)) # 4222 / 5000
+
 
 peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
 peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_std[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
 
 data$corralphamodel=apply(peak_params_amp, 1, max, na.rm = TRUE)
 data$corralphamodel[data$corralphamodel == -Inf] = NaN
@@ -1257,7 +1278,7 @@ ggplot(data2, aes(x=log10(abs(expon_error)), y=log10(corralphamodel)))+  geom_po
 ggsave('~/Desktop/alertness_2023/Figures/Simulated_exponent_scatter_error_MODELLED_power_relationship_by_simulated_exponent.pdf', device = "pdf", width= 5, height =5)
 
 
-
+# compute correlations for each simulated datapoint and then save in one big matrix
 
 spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralpha[data2$Var1==0.6],  use = c("complete.obs"), conf.level = 0.95) 
 spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralpha[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
@@ -1489,6 +1510,9 @@ library(dplyr)
 
 data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_output.csv', header = TRUE)
 
+mean(data$rsq_BIC) # 0.8789707
+ sd(data$rsq_BIC) # 0.05332499
+
 corrspec = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations_corrspec.csv', header = FALSE)
 
 corrspeclinear = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations_corrspec_linear.csv', header = FALSE)
@@ -1667,6 +1691,787 @@ ggsave('~/Desktop/alertness_2023/Figures/REVIEWSimulations_relationship_between_
 
 ```
 
+
+
+
+```{r simulated exponents area under curve for review}
+
+library(ggplot2)
+library(dplyr)
+
+data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_output.csv', header = TRUE)
+
+corrspec = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations_corrspec.csv', header = FALSE)
+
+periodic_spectra = read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_fitted_periodicspectrum.csv', header = FALSE)
+
+corrspeclinear = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations_corrspec_linear.csv', header = FALSE)
+
+corrspec_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations_error_signed.csv', header = FALSE)
+aperiodic_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations__aperiodic_error_signed.csv', header = FALSE)
+
+offset_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_Simulations__offset_error_signed.csv', header = FALSE)
+
+data$expon_error=data$Var1-data$expon_BIC
+
+data$corrspec_error= rowMeans(corrspec_error)
+data$aperiodic_error= rowMeans(aperiodic_error)
+data$offset_error= offset_error$V1
+
+data$corralpha= rowMeans(corrspec[,22:36])
+data$meanalphaGaussianModel= rowMeans(periodic_spectra[,22:36])
+data$corralphaerror= rowMeans(corrspec_error[,22:36])
+data$corralphalinear=rowMeans(corrspeclinear[,22:36])
+
+data$expon_error=data$Var1-data$expon_BIC
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1, max, na.rm = TRUE)
+data$corralphamodel[data$corralphamodel == -Inf] = NaN
+
+# remove bad estimates 
+data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
+data2= data2[data2$expon_BIC > 0.3 & data2$expon_BIC < 2.0 ,]
+data2$expon_error_sqd= data2$expon_error^2
+
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$meanalphaGaussianModel[data2$Var1==0.6],  use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$meanalphaGaussianModel[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$meanalphaGaussianModel[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$meanalphaGaussianModel[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$meanalphaGaussianModel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$meanalphaGaussianModel[data2$Var1==1.1],use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$meanalphaGaussianModel[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$meanalphaGaussianModel[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$meanalphaGaussianModel[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$meanalphaGaussianModel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponent_meanalphamodelled.pdf', device = "pdf", height = 5, width = 7)
+
+
+data4plot2=data4plot
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralphamodel[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralphamodel[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralphamodel[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralphamodel[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphamodel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralphamodel[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralphamodel[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralphamodel[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralphamodel[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphamodel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]),
+                     nototals= c(sum(is.na(data2$corralphamodel[data2$Var1==0.6]))/length(data2$corralphamodel[data2$Var1==0.6]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==0.7]))/length(data2$corralphamodel[data2$Var1==0.7]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==0.8]))/length(data2$corralphamodel[data2$Var1==0.8]),sum(is.na(data2$corralphamodel[data2$Var1==0.9]))/length(data2$corralphamodel[data2$Var1==0.9]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1]))/length(data2$corralphamodel[data2$Var1==1]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.1]))/length(data2$corralphamodel[data2$Var1==1.1]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.2]))/length(data2$corralphamodel[data2$Var1==1.2]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.3]))/length(data2$corralphamodel[data2$Var1==1.3]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.4]))/length(data2$corralphamodel[data2$Var1==1.4]),sum(is.na(data2$corralphamodel[data2$Var1==1.5]))/length(data2$corralphamodel[data2$Var1==1.5])))
+
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5)
+               
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponent.pdf', device = "pdf", height = 5, width = 5)
+
+data4plot2$nototals =0
+data4plot=rbind(data4plot2, data4plot)
+data4plot$type= rep(c('subtraction', 'model'), each =10)
+
+data4plot4=data4plot
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + geom_hline(yintercept = c(-0.15, 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponent_comparison_alpha_method.pdf', device = "pdf", height = 5, width = 12)
+
+
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralphalinear[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralphalinear[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralphalinear[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralphalinear[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralphalinear[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralphalinear[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralphalinear[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralphalinear[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+
+
+data4plot$nototals =0
+data4plot$type = 'linear'
+data4plot=rbind(data4plot4, data4plot)
+data4plot$type = factor(data4plot$type, levels = c('model', 'subtraction', 'linear'))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill= '1')) +
+    ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = c(-0.15, 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponents_model_no_NAs_compare_all.pdf', device = "pdf", height = 5, width = 15)
+
+
+## beta effects 
+
+spr1=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.6], data2$corralphamodel[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.7], data2$corralphamodel[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.8], data2$corralphamodel[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.9], data2$corralphamodel[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.0], data2$corralphamodel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.1], data2$corralphamodel[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.2], data2$corralphamodel[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.3], data2$corralphamodel[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.4], data2$corralphamodel[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.5], data2$corralphamodel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+data4plot2= data4plot
+
+spr1=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.6], data2$corralpha[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.7], data2$corralpha[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.8], data2$corralpha[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.9], data2$corralpha[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.0], data2$corralpha[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.1], data2$corralpha[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.2], data2$corralpha[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.3], data2$corralpha[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.4], data2$corralpha[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.5], data2$corralpha[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+data4plot3= data4plot
+
+
+spr1=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.6], data2$corralphalinear[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.7], data2$corralphalinear[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.8], data2$corralphalinear[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.9], data2$corralphalinear[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.0], data2$corralphalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.1], data2$corralphalinear[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.2], data2$corralphalinear[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.3], data2$corralphalinear[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.4], data2$corralphalinear[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.5], data2$corralphalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+data4plot=rbind(data4plot, data4plot2, data4plot3)
+data4plot$type = rep(c('linear', 'model', 'subtraction'), each=10)
+data4plot$type = factor(data4plot$type, levels = c('model', 'subtraction', 'linear'))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill= '1')) +
+    ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = c( 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_beta_by_simulated_exponents_model_compare_all.pdf', device = "pdf", height = 5, width = 15, dpi = )
+
+
+
+
+spr1=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.6], data2$corrbetalinear[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.7], data2$corrbetalinear[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.8], data2$corrbetalinear[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.9], data2$corrbetalinear[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.0], data2$corrbetalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.1], data2$corrbetalinear[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.2], data2$corrbetalinear[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.3], data2$corrbetalinear[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.4], data2$corrbetalinear[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.5], data2$corrbetalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+
+## offset 
+
+spr1=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.6], rowMeans(corrspec2[data2$Var1==0.6,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.7], rowMeans(corrspec2[data2$Var1==0.7,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.8], rowMeans(corrspec2[data2$Var1==0.8,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.9], rowMeans(corrspec2[data2$Var1==0.9,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.0], rowMeans(corrspec2[data2$Var1==1.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.1], rowMeans(corrspec2[data2$Var1==1.1,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.2], rowMeans(corrspec2[data2$Var1==1.2,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.3], rowMeans(corrspec2[data2$Var1==1.3,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.4], rowMeans(corrspec2[data2$Var1==1.4,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.5], rowMeans(corrspec2[data2$Var1==1.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+```
+
+
+
+```{r simulated exponents Smoother PSD}
+
+library(ggplot2)
+library(dplyr)
+
+data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_expon_samllwin_output.csv', header = TRUE)
+
+corrspec = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations_corrspec.csv', header = FALSE)
+
+corrspeclinear = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations_corrspec_linear.csv', header = FALSE)
+
+corrspec_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations_error_signed.csv', header = FALSE)
+aperiodic_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations__aperiodic_error_signed.csv', header = FALSE)
+
+offset_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations__offset_error_signed.csv', header = FALSE)
+
+data$expon_error=data$Var1-data$expon_BIC
+
+data$corrspec_error= rowMeans(corrspec_error)
+data$aperiodic_error= rowMeans(aperiodic_error)
+data$offset_error= offset_error$V1
+
+data$corralpha= rowMeans(corrspec[,15:24])
+data$corralphaerror= rowMeans(corrspec_error[,15:24])
+data$corralphalinear=rowMeans(corrspeclinear[,15:24])
+
+data$expon_error=data$Var1-data$expon_BIC
+
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_expon_samllwin_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_expon_samllwin_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1, max, na.rm = TRUE)
+data$corralphamodel[data$corralphamodel == -Inf] = NaN
+
+
+data$corrspec_error= rowMeans(corrspec_error)
+data$aperiodic_error= rowMeans(aperiodic_error)
+data$offset_error= offset_error$V1
+
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1, max, na.rm = TRUE)
+data$corralphamodel[data$corralphamodel == -Inf] = NaN
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <12 | peak_params_cf >24)] = NaN
+peak_params_cf[which(peak_params_cf <12 | peak_params_cf >24)] = NaN
+
+data$corrbetamodel=apply(peak_params_amp, 1,max,na.rm = TRUE)
+data$corrbetamodel[data$corrbetamodel== -Inf] =NaN
+
+data$corralphamodel_error= (data$corralphamodel-0.7)^2
+data$expon_error=data$Var1-data$expon_BIC
+
+
+# remove bad estimates 
+data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
+corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC)   ,]
+corrspec2= corrspec2[data2$expon_BIC > 0.3 & data2$expon_BIC < 2.0  ,]
+data2= data2[data2$expon_BIC > 0.3 & data2$expon_BIC < 2.0 ,]
+
+data2$expon_error_sqd= data2$expon_error^2
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralpha[data2$Var1==0.6],  use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralpha[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralpha[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralpha[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralpha[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralpha[data2$Var1==1.1],use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralpha[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralpha[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralpha[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralpha[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+data4plot2=data4plot
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralphamodel[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralphamodel[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralphamodel[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralphamodel[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphamodel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralphamodel[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralphamodel[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralphamodel[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralphamodel[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphamodel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]),
+                     nototals= c(sum(is.na(data2$corralphamodel[data2$Var1==0.6]))/length(data2$corralphamodel[data2$Var1==0.6]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==0.7]))/length(data2$corralphamodel[data2$Var1==0.7]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==0.8]))/length(data2$corralphamodel[data2$Var1==0.8]),sum(is.na(data2$corralphamodel[data2$Var1==0.9]))/length(data2$corralphamodel[data2$Var1==0.9]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1]))/length(data2$corralphamodel[data2$Var1==1]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.1]))/length(data2$corralphamodel[data2$Var1==1.1]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.2]))/length(data2$corralphamodel[data2$Var1==1.2]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.3]))/length(data2$corralphamodel[data2$Var1==1.3]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.4]))/length(data2$corralphamodel[data2$Var1==1.4]),sum(is.na(data2$corralphamodel[data2$Var1==1.5]))/length(data2$corralphamodel[data2$Var1==1.5])))
+
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5)
+               
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponent_smallWindows.pdf', device = "pdf", height = 5, width = 5)
+
+data4plot2$nototals =0
+data4plot=rbind(data4plot2, data4plot)
+data4plot$type= rep(c('subtraction', 'model'), each =10)
+
+data4plot4=data4plot
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + geom_hline(yintercept = c(-0.15, 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponent_comparison_alpha_method_smallWindows.pdf', device = "pdf", height = 5, width = 12)
+
+
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralphalinear[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralphalinear[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralphalinear[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralphalinear[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralphalinear[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralphalinear[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralphalinear[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralphalinear[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+
+
+data4plot$nototals =0
+data4plot$type = 'linear'
+data4plot=rbind(data4plot4, data4plot)
+data4plot$type = factor(data4plot$type, levels = c('model', 'subtraction', 'linear'))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill= '1')) +
+    ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = c(0), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponents_model_no_NAs_compare_all_smallWindows.pdf', device = "pdf", height = 5, width = 15)
+
+
+mean(data4plot$corrs[data4plot$type == 'model']) # 0.02379773
+mean(data4plot$corrs[data4plot$type == 'subtraction']) # -0.3322307
+mean(data4plot$corrs[data4plot$type == 'linear']) #--0.1138087
+
+
+mean(data$rsq_BIC) # 0.9223037
+sd(data$rsq_BIC) # 0.03773729
+
+
+## beta effects 
+
+spr1=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.6], data2$corralphamodel[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.7], data2$corralphamodel[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.8], data2$corralphamodel[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==0.9], data2$corralphamodel[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.0], data2$corralphamodel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.1], data2$corralphamodel[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.2], data2$corralphamodel[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.3], data2$corralphamodel[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.4], data2$corralphamodel[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrbetamodel[data2$Var1==1.5], data2$corralphamodel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+data4plot2= data4plot
+
+spr1=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.6], data2$corralpha[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.7], data2$corralpha[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.8], data2$corralpha[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==0.9], data2$corralpha[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.0], data2$corralpha[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.1], data2$corralpha[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.2], data2$corralpha[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.3], data2$corralpha[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.4], data2$corralpha[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrbeta[data2$Var1==1.5], data2$corralpha[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+data4plot3= data4plot
+
+
+spr1=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.6], data2$corralphalinear[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.7], data2$corralphalinear[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.8], data2$corralphalinear[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==0.9], data2$corralphalinear[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.0], data2$corralphalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.1], data2$corralphalinear[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.2], data2$corralphalinear[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.3], data2$corralphalinear[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.4], data2$corralphalinear[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrbetalinear[data2$Var1==1.5], data2$corralphalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+data4plot=rbind(data4plot, data4plot2, data4plot3)
+data4plot$type = rep(c('linear', 'model', 'subtraction'), each=10)
+data4plot$type = factor(data4plot$type, levels = c('model', 'subtraction', 'linear'))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill= '1')) +
+    ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = c( 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_beta_by_simulated_exponents_model_compare_all.pdf', device = "pdf", height = 5, width = 15)
+
+
+
+
+spr1=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.6], data2$corrbetalinear[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.7], data2$corrbetalinear[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.8], data2$corrbetalinear[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==0.9], data2$corrbetalinear[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.0], data2$corrbetalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.1], data2$corrbetalinear[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.2], data2$corrbetalinear[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.3], data2$corrbetalinear[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.4], data2$corrbetalinear[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$corrthetalinear[data2$Var1==1.5], data2$corrbetalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+    ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship with beta (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+
+## offset 
+
+spr1=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.6], rowMeans(corrspec2[data2$Var1==0.6,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.7], rowMeans(corrspec2[data2$Var1==0.7,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.8], rowMeans(corrspec2[data2$Var1==0.8,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==0.9], rowMeans(corrspec2[data2$Var1==0.9,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.0], rowMeans(corrspec2[data2$Var1==1.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.1], rowMeans(corrspec2[data2$Var1==1.1,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.2], rowMeans(corrspec2[data2$Var1==1.2,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.3], rowMeans(corrspec2[data2$Var1==1.3,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.4], rowMeans(corrspec2[data2$Var1==1.4,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$offset_BIC[data2$Var1==1.5], rowMeans(corrspec2[data2$Var1==1.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+```
+
+
+
+```{r simulated exponents Smoother PSD point estimate}
+
+library(ggplot2)
+library(dplyr)
+
+data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_expon_samllwin_output.csv', header = TRUE)
+
+corrspec = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations_corrspec.csv', header = FALSE)
+
+corrspeclinear = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations_corrspec_linear.csv', header = FALSE)
+
+corrspec_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations_error_signed.csv', header = FALSE)
+aperiodic_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations__aperiodic_error_signed.csv', header = FALSE)
+
+offset_error = read.csv('~/Documents/McGill/simulations4Giu/Exponent_smallwin_Simulations__offset_error_signed.csv', header = FALSE)
+
+data$expon_error=data$Var1-data$expon_BIC
+
+data$corrspec_error= rowMeans(corrspec_error)
+data$aperiodic_error= rowMeans(aperiodic_error)
+data$offset_error= offset_error$V1
+
+data$corralpha= apply(corrspec[,15:24], 1, max)
+data$corralphaerror= rowMeans(corrspec_error[,15:24])
+data$corralphalinear= apply(corrspeclinear[,15:24], 1, max)
+
+data$expon_error=data$Var1-data$expon_BIC
+
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_expon_samllwin_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_expon_samllwin_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1, max, na.rm = TRUE)
+data$corralphamodel[data$corralphamodel == -Inf] = NaN
+
+
+data$corrspec_error= rowMeans(corrspec_error)
+data$aperiodic_error= rowMeans(aperiodic_error)
+data$offset_error= offset_error$V1
+
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1, max, na.rm = TRUE)
+data$corralphamodel[data$corralphamodel == -Inf] = NaN
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_exponent_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <12 | peak_params_cf >24)] = NaN
+peak_params_cf[which(peak_params_cf <12 | peak_params_cf >24)] = NaN
+
+data$corrbetamodel=apply(peak_params_amp, 1,max,na.rm = TRUE)
+data$corrbetamodel[data$corrbetamodel== -Inf] =NaN
+
+data$corralphamodel_error= (data$corralphamodel-0.7)^2
+data$expon_error=data$Var1-data$expon_BIC
+
+
+# remove bad estimates 
+data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
+corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC)   ,]
+corrspec2= corrspec2[data2$expon_BIC > 0.3 & data2$expon_BIC < 2.0  ,]
+data2= data2[data2$expon_BIC > 0.3 & data2$expon_BIC < 2.0 ,]
+
+data2$expon_error_sqd= data2$expon_error^2
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralpha[data2$Var1==0.6],  use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralpha[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralpha[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralpha[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralpha[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralpha[data2$Var1==1.1],use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralpha[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralpha[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralpha[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralpha[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+data4plot2=data4plot
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralphamodel[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralphamodel[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralphamodel[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralphamodel[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphamodel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralphamodel[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralphamodel[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralphamodel[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralphamodel[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphamodel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]),
+                     nototals= c(sum(is.na(data2$corralphamodel[data2$Var1==0.6]))/length(data2$corralphamodel[data2$Var1==0.6]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==0.7]))/length(data2$corralphamodel[data2$Var1==0.7]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==0.8]))/length(data2$corralphamodel[data2$Var1==0.8]),sum(is.na(data2$corralphamodel[data2$Var1==0.9]))/length(data2$corralphamodel[data2$Var1==0.9]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1]))/length(data2$corralphamodel[data2$Var1==1]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.1]))/length(data2$corralphamodel[data2$Var1==1.1]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.2]))/length(data2$corralphamodel[data2$Var1==1.2]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.3]))/length(data2$corralphamodel[data2$Var1==1.3]),
+                     sum(is.na(data2$corralphamodel[data2$Var1==1.4]))/length(data2$corralphamodel[data2$Var1==1.4]),sum(is.na(data2$corralphamodel[data2$Var1==1.5]))/length(data2$corralphamodel[data2$Var1==1.5])))
+
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5)
+               
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponent_smallWindows_2.pdf', device = "pdf", height = 5, width = 5)
+
+data4plot2$nototals =0
+data4plot=rbind(data4plot2, data4plot)
+data4plot$type= rep(c('subtraction', 'model'), each =10)
+
+data4plot4=data4plot
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + geom_hline(yintercept = c(-0.15, 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponent_comparison_alpha_method_smallWindows_2.pdf', device = "pdf", height = 5, width = 12)
+
+
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.6], data2$corralphalinear[data2$Var1==0.6], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.7], data2$corralphalinear[data2$Var1==0.7], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.8], data2$corralphalinear[data2$Var1==0.8], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==0.9], data2$corralphalinear[data2$Var1==0.9], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.1], data2$corralphalinear[data2$Var1==1.1], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.2], data2$corralphalinear[data2$Var1==1.2], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.3], data2$corralphalinear[data2$Var1==1.3], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.4], data2$corralphalinear[data2$Var1==1.4], use = c("complete.obs"), conf.level = 0.95) 
+spr10=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]], spr10[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]], spr10[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]], spr10[[3]]))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated arrhythmic slope (Hz-1)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+
+
+
+data4plot$nototals =0
+data4plot$type = 'linear'
+data4plot=rbind(data4plot4, data4plot)
+data4plot$type = factor(data4plot$type, levels = c('model', 'subtraction', 'linear'))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill= '1')) +
+    ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = c(0), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_exponents_model_no_NAs_compare_all_smallWindows_2.pdf', device = "pdf", height = 5, width = 15)
+
+
+```
 
 
 ```{r simulated alpha bandwidths}
@@ -1865,6 +2670,425 @@ ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_
 
 ```
 
+
+
+
+```{r simulated alpha bandwidths point estimates}
+
+library(ggplot2)
+library(dplyr)
+
+data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_output.csv', header = TRUE)
+
+corrspec = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_corrspec.csv', header = FALSE)
+
+corrspeclinear = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_corrspec_linear.csv', header = FALSE)
+
+corrspec_error = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_error_signed.csv', header = FALSE)
+
+data$expon_error= (data$expon_BIC-1)
+data$corrspec_error= rowMeans(abs(corrspec_error))
+
+
+data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_output.csv', header = TRUE)
+data$corralpha=apply(corrspec[,22:36], 1, max)
+data$corralphalinear=apply(corrspeclinear[,22:36], 1, max)
+data$alpha_amplitude= data$Var1-0.3
+data$expon_error= (data$expon_BIC-1)^2
+data$corrspec_error= rowMeans(corrspec_error)
+
+# add in column for beta even though we do not simulate changes 
+data$corrbeta=apply(corrspec[,37:73], 1, max)
+data$corrbetalinear=apply(corrspeclinear[,37:73], 1, max)
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+#trials with alpha peak
+peak_params_cf_test= peak_params_cf
+peak_params_cf_test[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+peak_params_cf_test2= peak_params_cf
+peak_params_cf_test2[which(peak_params_cf <12 | peak_params_cf >30)] = NaN
+
+sum((rowSums(apply(peak_params_cf_test, 2, is.na)) < 6) & (rowSums(apply(peak_params_cf_test2, 2, is.na)) < 6)) # 2483 / 5000
+
+table(data$Var1[(rowSums(apply(peak_params_cf_test, 2, is.na)) < 6)  & (rowSums(apply(peak_params_cf_test2, 2, is.na)) < 6)] )
+
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1,max,na.rm = TRUE)
+data$corralphamodel[data$corralphamodel== -Inf] =NaN
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <14 | peak_params_cf >30)] = NaN
+peak_params_cf[which(peak_params_cf <14 | peak_params_cf >30)] = NaN
+
+data$corrbetamodel=apply(peak_params_amp, 1,max,na.rm = TRUE)
+data$corrbetamodel[data$corrbetamodel== -Inf] =NaN
+
+data$corralphamodel_error= (data$corralphamodel-0.7)^2
+data$expon_error= (data$expon_BIC-1)
+
+# remove bad estimates 
+data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
+corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC)   ,]
+corrspec2= corrspec2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5  ,]
+data2= data2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5 ,]
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1], rowMeans(corrspec2[data2$Var1==1,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], rowMeans(corrspec2[data2$Var1==1.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.0], rowMeans(corrspec2[data2$Var1==2.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.5], rowMeans(corrspec2[data2$Var1==2.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.0], rowMeans(corrspec2[data2$Var1==3.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.5], rowMeans(corrspec2[data2$Var1==3.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.0], rowMeans(corrspec2[data2$Var1==4.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.5], rowMeans(corrspec2[data2$Var1==4.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==5.0], rowMeans(corrspec2[data2$Var1==5.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]] ), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated rhythmic alpha amplitude (a.u.)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_bandwidth_pointest.pdf', device = "pdf", height = 5, width = 5)
+
+
+data4plot2= data4plot
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphamodel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphamodel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.0], data2$corralphamodel[data2$Var1==2.0], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.5], data2$corralphamodel[data2$Var1==2.5], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.0], data2$corralphamodel[data2$Var1==3.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.5], data2$corralphamodel[data2$Var1==3.5], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.0], data2$corralphamodel[data2$Var1==4.0], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.5], data2$corralphamodel[data2$Var1==4.5], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==5.0], data2$corralphamodel[data2$Var1==5.0], use = c("complete.obs"), conf.level = 0.95) 
+
+
+
+data4plot=data.frame(freqs= c(1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]]),
+                     nototals=c(sum(is.na(data2$corrbetamodel[data2$Var1==1.0]))/length(data2$corrbetamodel[data2$Var1==1.0]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==1.5]))/length(data2$corralphamodel[data2$Var1==1.5]),                          sum(is.na(data2$corralphamodel[data2$Var1==2.0]))/length(data2$corralphamodel[data2$Var1==2.0]),sum(is.na(data2$corralphamodel[data2$Var1==2.5]))/length(data2$corralphamodel[data2$Var1==2.5]), sum(is.na(data2$corralphamodel[data2$Var1==3.0]))/length(data2$corralphamodel[data2$Var1==3.0]), sum(is.na(data2$corralphamodel[data2$Var1==3.5]))/length(data2$corralphamodel[data2$Var1==3.5]), sum(is.na(data2$corralphamodel[data2$Var1==4.0]))/length(data2$corralphamodel[data2$Var1==4.0]), sum(is.na(data2$corralphamodel[data2$Var1==4.5]))/length(data2$corralphamodel[data2$Var1==4.5]),                  sum(is.na(data2$corralphamodel[data2$Var1==5.0]))/length(data2$corralphamodel[data2$Var1==5.0])))
+
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5)
+               
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_bandwidth_modeled_params_pointest.pdf', device = "pdf", height = 5, width = 10)
+
+
+data4plot2$nototals =0
+data4plot=rbind(data4plot2, data4plot)
+data4plot$type= rep(c('2.log', '1.model'), each =9)
+
+data4plot4 = data4plot
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + geom_hline(yintercept = c(-0.15, 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_amplitude_comparison_alpha_method_pointest.pdf', device = "pdf", height = 5, width = 12)
+
+
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.0], data2$corralphalinear[data2$Var1==2.0], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.5], data2$corralphalinear[data2$Var1==2.5], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.0], data2$corralphalinear[data2$Var1==3.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.5], data2$corralphalinear[data2$Var1==3.5], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.0], data2$corralphalinear[data2$Var1==4.0], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.5], data2$corralphalinear[data2$Var1==4.5], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==5.0], data2$corralphalinear[data2$Var1==5.0], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated rhythmic alpha amplitude (a.u.)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_bandwidth_between_alpha_slope_by_simulated_linearspace_pointest.pdf', device = "pdf", height = 5, width = 5)
+
+
+data4plot=rbind(data4plot4[,1:4], data4plot)
+data4plot$type= rep(c('2.log', '1.model', '3.linear'), each =9)
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper,  colour= '1', fill='1')) +
+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + geom_hline(yintercept = c(0), linetype= 'dashed') + facet_wrap(~type)
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_amplitude_comparison_alpha_method_pointest.pdf', device = "pdf", height = 5, width = 12)
+
+
+
+```
+
+
+```{r simulated alpha bandwidths area under the curve}
+
+library(ggplot2)
+library(dplyr)
+
+data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_output.csv', header = TRUE)
+
+corrspec = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_corrspec.csv', header = FALSE)
+
+periodicspectra = read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_fitted_periodicspectrum.csv', header = FALSE)
+
+corrspecLinear = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_corrspec_linear.csv', header = FALSE)
+
+corrspec_error = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_error_signed.csv', header = FALSE)
+
+data$expon_error= (data$expon_BIC-1)
+data$corrspec_error= rowMeans(abs(corrspec_error))
+
+data$Var1 = factor(data$Var1)
+
+data$corralpha=rowMeans(corrspec[,22:36])
+data$meanmodelledalpha=rowMeans(periodicspectra[,22:36])
+data$corralphalinear=rowMeans(corrspecLinear[,22:36])
+data$alpha_amplitude= data$Var1-0.3
+data$expon_error= (data$expon_BIC-1)^2
+data$corrspec_error= rowMeans(corrspec_error)
+
+# add in column for beta even though we do not simulate changes 
+data$corrbeta=rowMeans(corrspec[,37:73])
+data$corrbetalinear=rowMeans(corrspecLinear[,37:73])
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_peaks_amplitude.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1,max,na.rm = TRUE)
+data$corralphamodel[data$corralphamodel== -Inf] =NaN
+
+# remove bad estimates 
+data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
+corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC)   ,]
+corrspec2= corrspec2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5  ,]
+data2= data2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5 ,]
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1], data2$meanmodelledalpha[data2$Var1==1], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$meanmodelledalpha[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.0], data2$meanmodelledalpha[data2$Var1==2.0], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.5], data2$meanmodelledalpha[data2$Var1==2.5], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.0], data2$meanmodelledalpha[data2$Var1==3.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.5], data2$meanmodelledalpha[data2$Var1==3.5], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.0], data2$meanmodelledalpha[data2$Var1==4.0], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.5], data2$meanmodelledalpha[data2$Var1==4.5], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==5.0], data2$meanmodelledalpha[data2$Var1==5.0], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]] ), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated rhythmic alpha amplitude (a.u.)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_bandwidth_meanmodelledalpha.pdf', device = "pdf", height = 5, width = 7)
+
+
+```
+
+
+
+```{r simulated alpha bandwidths Extra Wide}
+
+library(ggplot2)
+library(dplyr)
+
+data= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidthExtraWide_output.csv', header = TRUE)
+
+data2= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidth_output.csv', header = TRUE)
+
+corrspec = read.csv('~/Documents/McGill/simulations4Giu/BandwidthExtraWide_Simulations_corrspec.csv', header = FALSE)
+
+corrspec2 = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_corrspec.csv', header = FALSE)
+
+corrspecLinear = read.csv('~/Documents/McGill/simulations4Giu/BandwidthExtraWide_Simulations_corrspec_linear.csv', header = FALSE)
+
+corrspecLinear2 = read.csv('~/Documents/McGill/simulations4Giu/Bandwidth_Simulations_corrspec_linear.csv', header = FALSE)
+
+corrspec_error = read.csv('~/Documents/McGill/simulations4Giu/BandwidthExtraWide_Simulations_error_signed.csv', header = FALSE)
+
+data$expon_error= (data$expon_BIC-1)
+data$corrspec_error= rowMeans(abs(corrspec_error))
+
+data$corralpha=rowMeans(corrspec[,22:36])
+data$corralphalinear=rowMeans(corrspecLinear[,22:36])
+data$corralpha=apply(corrspec[,22:36], 1, max)
+data$corralphalinear=apply(corrspecLinear[,22:36], 1, max)
+data$alpha_amplitude= data$Var1-0.3
+data$expon_error= (data$expon_BIC-1)^2
+data$corrspec_error= rowMeans(corrspec_error)
+
+data2$corralpha=rowMeans(corrspec2[,22:36])
+data2$corralphalinear=rowMeans(corrspecLinear2[,22:36])
+
+cor.test(data2$corralpha, data$corralpha)
+cor.test(data2$corralphalinear, data$corralphalinear)
+
+# add in column for beta even though we do not simulate changes 
+data$corrbeta=rowMeans(corrspec[,37:73])
+data$corrbetalinear=rowMeans(corrspecLinear[,37:73])
+
+peak_params_cf= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidthExtraWide_peaks_centerFreq.csv', header = FALSE)
+peak_params_amp= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidthExtraWide_peaks_amplitude.csv', header = FALSE)
+peak_params_std= read.csv('~/Documents/McGill/simulations4Giu/Simulations_bandwidthExtraWide_peaks_std.csv', header = FALSE)
+
+peak_params_cf= as.matrix(peak_params_cf)
+peak_params_amp= as.matrix(peak_params_amp)
+
+peak_params_amp[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+peak_params_cf[which(peak_params_cf <8 | peak_params_cf >12)] = NaN
+
+data$corralphamodel=apply(peak_params_amp, 1,max,na.rm = TRUE)
+data$corralphamodel[data$corralphamodel== -Inf] =NaN
+
+
+# remove bad estimates 
+data2= data[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC) ,]
+corrspec2= corrspec[abs(data$mse_BIC) < 3*sd(data$mse_BIC) + mean(data$mse_BIC)   ,]
+corrspec2= corrspec2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5  ,]
+data2= data2[data2$expon_BIC > 0.5 & data2$expon_BIC < 1.5 ,]
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1], rowMeans(corrspec2[data2$Var1==1,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], rowMeans(corrspec2[data2$Var1==1.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.0], rowMeans(corrspec2[data2$Var1==2.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.5], rowMeans(corrspec2[data2$Var1==2.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.0], rowMeans(corrspec2[data2$Var1==3.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.5], rowMeans(corrspec2[data2$Var1==3.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.0], rowMeans(corrspec2[data2$Var1==4.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.5], rowMeans(corrspec2[data2$Var1==4.5,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==5.0], rowMeans(corrspec2[data2$Var1==5.0,22:36]), use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]] ), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated rhythmic alpha amplitude (a.u.)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_bandwidthExtraWide.pdf', device = "pdf", height = 5, width = 5)
+
+
+data4plot2= data4plot
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphamodel[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphamodel[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.0], data2$corralphamodel[data2$Var1==2.0], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.5], data2$corralphamodel[data2$Var1==2.5], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.0], data2$corralphamodel[data2$Var1==3.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.5], data2$corralphamodel[data2$Var1==3.5], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.0], data2$corralphamodel[data2$Var1==4.0], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.5], data2$corralphamodel[data2$Var1==4.5], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==5.0], data2$corralphamodel[data2$Var1==5.0], use = c("complete.obs"), conf.level = 0.95) 
+
+
+
+data4plot=data.frame(freqs= c(1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]]),
+                     nototals=c(sum(is.na(data2$corrbetamodel[data2$Var1==1.0]))/length(data2$corrbetamodel[data2$Var1==1.0]),
+                                 sum(is.na(data2$corralphamodel[data2$Var1==1.5]))/length(data2$corralphamodel[data2$Var1==1.5]),                          sum(is.na(data2$corralphamodel[data2$Var1==2.0]))/length(data2$corralphamodel[data2$Var1==2.0]),sum(is.na(data2$corralphamodel[data2$Var1==2.5]))/length(data2$corralphamodel[data2$Var1==2.5]), sum(is.na(data2$corralphamodel[data2$Var1==3.0]))/length(data2$corralphamodel[data2$Var1==3.0]), sum(is.na(data2$corralphamodel[data2$Var1==3.5]))/length(data2$corralphamodel[data2$Var1==3.5]), sum(is.na(data2$corralphamodel[data2$Var1==4.0]))/length(data2$corralphamodel[data2$Var1==4.0]), sum(is.na(data2$corralphamodel[data2$Var1==4.5]))/length(data2$corralphamodel[data2$Var1==4.5]),                  sum(is.na(data2$corralphamodel[data2$Var1==5.0]))/length(data2$corralphamodel[data2$Var1==5.0])))
+
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5)
+               
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_bandwidth_modeled_paramsExtraWide.pdf', device = "pdf", height = 5, width = 10)
+
+
+data4plot2$nototals =0
+data4plot=rbind(data4plot2, data4plot)
+data4plot$type= rep(c('2.log', '1.model'), each =9)
+
+data4plot4 = data4plot
+
+data4plot$nototals= data4plot$nototals+0.000001
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= -1*log10(100*nototals), fill= -1*log10(100*nototals))) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14)) + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + geom_hline(yintercept = c(-0.15, 0.15), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_amplitude_comparison_alpha_methodExtraWide.pdf', device = "pdf", height = 5, width = 12)
+
+
+
+spr1=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.0], data2$corralphalinear[data2$Var1==1.0], use = c("complete.obs"), conf.level = 0.95) 
+spr2=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==1.5], data2$corralphalinear[data2$Var1==1.5], use = c("complete.obs"), conf.level = 0.95) 
+spr3=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.0], data2$corralphalinear[data2$Var1==2.0], use = c("complete.obs"), conf.level = 0.95) 
+spr4=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==2.5], data2$corralphalinear[data2$Var1==2.5], use = c("complete.obs"), conf.level = 0.95) 
+spr5=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.0], data2$corralphalinear[data2$Var1==3.0], use = c("complete.obs"), conf.level = 0.95) 
+spr6=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==3.5], data2$corralphalinear[data2$Var1==3.5], use = c("complete.obs"), conf.level = 0.95) 
+spr7=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.0], data2$corralphalinear[data2$Var1==4.0], use = c("complete.obs"), conf.level = 0.95) 
+spr8=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==4.5], data2$corralphalinear[data2$Var1==4.5], use = c("complete.obs"), conf.level = 0.95) 
+spr9=DescTools::SpearmanRho(data2$expon_BIC[data2$Var1==5.0], data2$corralphalinear[data2$Var1==5.0], use = c("complete.obs"), conf.level = 0.95) 
+
+
+data4plot=data.frame(freqs= c(1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0),
+                     corrs=c(spr1[[1]], spr2[[1]], spr3[[1]], spr4[[1]], spr5[[1]], spr6[[1]], spr7[[1]], spr8[[1]], spr9[[1]]), 
+                     lower=c(spr1[[2]], spr2[[2]], spr3[[2]], spr4[[2]], spr5[[2]], spr6[[2]], spr7[[2]], spr8[[2]], spr9[[2]]), 
+                     upper=c(spr1[[3]], spr2[[3]], spr3[[3]], spr4[[3]], spr5[[3]], spr6[[3]], spr7[[3]], spr8[[3]], spr9[[3]]))
+
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill='1')) +
+  stat_smooth( method = "glm",formula = y ~ poly(x, 1),fullrange = T, color= 'black')+  ggpubr::theme_classic2() + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + xlab("simulated rhythmic alpha amplitude (a.u.)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white") + geom_point( size=5) + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_bandwidth_between_alpha_slope_by_simulated_linearspaceExtraWide.pdf', device = "pdf", height = 5, width = 5)
+
+
+
+
+
+data4plot$nototals =0
+data4plot$type = '3.linear'
+data4plot=rbind(data4plot4, data4plot)
+data4plot$type = factor(data4plot$type, levels = c('1.model', '2.log', '3.linear'))
+
+ggplot(data4plot, aes(freqs, corrs, ymin= lower, ymax= upper, colour= '1', fill= '1')) +
+    ggpubr::theme_classic2()   + theme(axis.text.x = element_text(size=14), axis.title.y = element_text(size=14), axis.text.y = element_text(size=14), axis.title.x = element_text(size=14), legend.position = 'none') + xlab("simulated rhythmic alpha frequency (Hz)") + ylab("estimated relationship (r)") + geom_errorbar(width=0)+geom_point(size=6, colour= "white")+ geom_point( size=5) + facet_wrap(~type) + scale_fill_manual(values=c('#10A0C0', '#D97D08')) + scale_colour_manual(values=c('#10A0C0', '#D97D08')) + geom_hline(yintercept = c( 0), linetype= 'dashed')
+
+ggsave('~/Desktop/alertness_2023/Figures/Simulations_relationship_between_alpha_slope_by_simulated_bandwidth_model_no_NAs_compare_allExtraWide.pdf', device = "pdf", height = 5, width = 15)
+
+
+
+```
 
 
 
