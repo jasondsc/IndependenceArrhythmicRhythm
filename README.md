@@ -12,6 +12,8 @@ We demonstrate that spectral detrending methods (i.e., subtracting the arrhythmi
 
 Data generated for this project (simulations) are aviable from the corresponding author upon reasonable request. Empirical data are accessible from the CamCAN website.
 
+We include some examples of the simulated time series, and the organized outputs after PSD and spectral modelling.
+
 ## Description of the project
 
 Here are the different steps we did :
