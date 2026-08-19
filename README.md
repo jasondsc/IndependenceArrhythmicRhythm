@@ -10,9 +10,9 @@ We demonstrate that spectral detrending methods (i.e., subtracting the arrhythmi
 
 ## Data
 
-Data generated for this project (simulations) are aviable from the corresponding author upon reasonable request. Empirical data are accessible from the CamCAN website.
+Data generated for this project (simulations) are aviable from the corresponding author upon reasonable request. Some examples of the simulated time series are on [OSF](https://osf.io/nx693/overview) while some of the organized outputs are included in the GitHub (see Folder). Empirical data are accessible from the CamCAN website.
 
-We include some examples of the simulated time series, and the organized outputs after PSD and spectral modelling.
+Note, we include some examples of the simulated time series, and the organized outputs after PSD and spectral modelling.
 
 ## Description of the project
 
@@ -25,6 +25,6 @@ Here are the different steps we did :
 
 ## Manuscript and Citation
 
-This work on [bioRxiv](XXXXXXX). Please cite da Silva Castanheira et al., 2025. If you have any questions please contact the authors of the paper.
+This work on [bioRxiv](https://doi.org/10.1101/2025.09.24.678322). Please cite da Silva Castanheira et al., 2025. If you have any questions please contact the authors of the paper.
 
 
